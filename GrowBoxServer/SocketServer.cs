@@ -46,16 +46,20 @@ namespace GrowBoxServer
             {
                 Socket handler = listener.Accept();
 
+                Console.WriteLine("Connected {0}", ((IPEndPoint)handler.RemoteEndPoint).Address.ToString());
                 new Task(() => HandleConnection(handler)).Start();
             }
         }
 
         private void HandleConnection(Socket handler)
         {
+            string remoteIp = ((IPEndPoint)handler.RemoteEndPoint).Address.ToString();
             // Create a new logger
-            FileLogger fl = new FileLogger(((IPEndPoint)handler.RemoteEndPoint).Address.ToString().Replace('.', '_') + ".log");
+            FileLogger fl = new FileLogger(remoteIp.Replace('.', '_') + ".log");
+            //ConsoleLogger fl = new ConsoleLogger();
+            fl.LogFormatter = (message) => string.Format("({1}) {0}\n", message.Message, DateTime.Now);
 
-            while (handler.Connected && handler.Poll(1000, SelectMode.SelectRead))
+            while (handler.Connected && (handler.Available != 0 && handler.Poll(1000, SelectMode.SelectRead)))
             {
                 string data = "";
                 byte[] buffer = new byte[1024];
@@ -69,6 +73,7 @@ namespace GrowBoxServer
 
                 fl.Log(new LogMessage(data, LoggingLevel.NORMAL, LogginType.INFO));
             }
+            Console.WriteLine("Disconnected {0}", ((IPEndPoint)handler.RemoteEndPoint).Address.ToString());
         }
     }
 }
